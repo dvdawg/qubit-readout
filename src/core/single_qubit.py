@@ -3,7 +3,6 @@ from scipy.optimize import minimize
 from scipy import integrate
 
 # dispersive shift calculation
-
 def compute_chi(g, delta_r):
     return g**2 / delta_r
 
@@ -109,3 +108,6 @@ def optimize_parameters(delta_r, g, kappa, delta_resonator, tau,
         'optimization_case': optimization_case,
         'energy_levels': energy_levels
     }
+
+
+# t1  = around 50-300 microseconds
