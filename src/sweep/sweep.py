@@ -35,7 +35,7 @@ os.makedirs(output_dir, exist_ok=True)
 start_time = time.time()
 
 tau = 200
-target_snr = args.target_snr   #S NR≥6 for ≈99% single-shot fidelity
+target_snr = args.target_snr 
 
 delta_r1_vals       = np.linspace(0.1, 1.0, 10)   # 100–1000 MHz
 delta_r2_vals       = np.linspace(0.1, 1.0, 10)

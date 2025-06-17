@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 
-energy_levels = 3
+energy_levels = 2
 t = np.linspace(0, 1000, 1000)
 
 # setup params (fixed)
