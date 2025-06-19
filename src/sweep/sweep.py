@@ -54,12 +54,10 @@ for delta_r1, delta_r2, g_1, g_2, kappa, delta_resonator in product(delta_r1_val
                             optimization_case=args.optimization_case,
                             energy_levels=args.energy_levels)
 
-    # 2) compute the true 200 ns integrated SNR
     chi_1, chi_2 = compute_chis(g_1, g_2, delta_r1, delta_r2)
     params = [res['Omega_q1_mag'], res['phi_q1'],
                 res['Omega_q2_mag'], res['phi_q2']]
 
-    # Get state pairs for final SNR calculation
     from two_qubit import get_state_pairs
     state_pairs = get_state_pairs(args.optimization_case, args.energy_levels)
 
