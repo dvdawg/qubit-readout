@@ -46,7 +46,7 @@ quasienergies = np.array(quasienergies)
 plt.figure(figsize=(9, 6))
 for i in range(n_levels):
     plt.plot(n_r_vals, quasienergies[:, i] / omega_d * (2 * np.pi * 1e9), label=f"|{i}⟩")
-plt.xlabel(r"Resonator photon number $\bar{n}_r")
+plt.xlabel(r"Resonator photon number $\bar{n}_r$")
 plt.ylabel("Floquet quasienergies (GHz)")
 plt.title("Floquet Quasienergies vs. Resonator Photon Number")
 plt.grid(True)
