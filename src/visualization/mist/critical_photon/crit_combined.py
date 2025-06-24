@@ -11,7 +11,7 @@ omega_d = omega_r - 0.033
 
 Delta_vals = np.linspace(0.75, 1.5, 50) 
 nbar_vals = np.linspace(0, 180, 181)
-drive_amps = 2.0 * g * np.sqrt(nbar_vals) # GHz
+drive_amps = 2.0 * g * np.sqrt(nbar_vals)
 
 def transmon_levels(n_levels, EC, EJ):
     return np.array([
@@ -71,7 +71,7 @@ for i, Delta in enumerate(Delta_vals):
     model = ft.Model(
         H0,
         H1,
-        omega_d_values=np.array([omega_d]),
+        omega_d_values=np.array([2.0 * np.pi * omega_d]),
         drive_amplitudes=2.0 * np.pi * drive_amps
     )
 
@@ -83,11 +83,12 @@ for i, Delta in enumerate(Delta_vals):
         print(f"Failed w/ Delta = {Delta:.3f} GHz: {e}")
         continue
 
-    psi0 = data["floquet_modes"][0][:, 0, :] 
+    psi0 = data["floquet_modes"][0][:, 1, :] # middle index chooses the energy level 
     levels = np.arange(psi0.shape[1]) 
     avg_levels = np.sum(np.abs(psi0)**2 * levels, axis=1)
 
-    idx = np.where(avg_levels >= 1.0)[0]
+    idx = np.where(avg_levels >= 3.0)[0] # threshold for population
+
     if idx.size:
         crit_nbar_numerical[i] = nbar_vals[idx[0]]
     else:

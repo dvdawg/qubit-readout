@@ -4,142 +4,109 @@ import qutip as qt
 import scqubits as scq
 import floquet as ft
 
+g = 0.120 # GHz
+EC = 0.220 # GHz
+omega_r = 5.3 # GHz
+omega_d = omega_r - 0.033
 
-g = 0.11
-EC = 0.28
-omega_r = 6.2
-omega_d = omega_r
-kappa = 0.1
-ng = 0.2
+Delta_vals = np.linspace(0.75, 1.5, 100) 
+nbar_vals = np.linspace(0, 180, 181)
+drive_amps = 2.0 * g * np.sqrt(nbar_vals)
 
-Delta_vals = np.linspace(0.75, 1.5, 31)
-nbar_max = 200
-nbar_vals = np.arange(0, nbar_max + 1)
+def transmon_levels(n_levels, EC, EJ):
+    return np.array([
+        -EJ + np.sqrt(8 * EJ * EC) * (n + 0.5) - (EC / 12) * (6 * n**2 + 6 * n + 3)
+        for n in range(n_levels)
+    ])
 
+def quantum_critical_n(omega_qs, EC, omega_r, g):
+    n_crits = []
+    for omega_q in omega_qs:
+        EJ = (omega_q + EC)**2 / (8 * EC)
+        total_ns = 10
+        e_levels = transmon_levels(total_ns, EC, EJ)
+        min_n_crit = float('inf')
+        for k in range(total_ns):
+            for l in range(total_ns):
+                if abs(k - l) != 1:
+                    continue
+                g_kl = g * np.sqrt(min(k, l) + 1)
+                omega_kl = e_levels[k] - e_levels[l]
+                n_crit = abs((omega_kl - omega_r) / (2 * g_kl))**2
+                if k == 0 or l == 0:
+                    min_n_crit = min(min_n_crit, n_crit)
+        n_crits.append(min_n_crit)
+    return np.array(n_crits)
 
-drive_amps = 2.0 * g * np.sqrt(nbar_vals)  # GHz
+omega_qs_analytical = omega_r + Delta_vals
+n_crit_analytical = quantum_critical_n(omega_qs_analytical, EC, omega_r, g)
 
-def get_transmon_hamiltonian(EJ, EC, ng, num_states=12):
-    qubit_params = dict(EJ=EJ, EC=EC, ng=ng, ncut=41)
+crit_nbar_numerical = np.full_like(Delta_vals, np.nan, dtype=float)
+
+options = ft.Options(
+    num_cpus = 4,
+    nsteps = 1000,
+    fit_range_fraction = 1.0,
+    overlap_cutoff = 0.8,
+    floquet_sampling_time_fraction = 0.0,
+    save_floquet_modes = True
+)
+
+for i, Delta in enumerate(Delta_vals):
+    omega_q = omega_r + Delta 
+    EJ = (omega_q + EC)**2 / (8 * EC)
+
+    num_states = 12
+    qubit_params = dict(EJ=EJ, EC=EC, ng=0.2, ncut=31)
     tmon = scq.Transmon(**qubit_params, truncated_dim=num_states)
     hs = scq.HilbertSpace([tmon])
     hs.generate_lookup()
-    
-    evals = hs["evals"][0][:num_states]
-    evecs = hs["evecs"][0][:num_states]
-    
-    H0 = 2.0 * np.pi * qt.Qobj(np.diag(evals - evals[0]))
-    
-    H1 = hs.op_in_dressed_eigenbasis(tmon.n_operator)
-    
-    return H0, H1, evals, evecs
 
-def find_critical_photon_number(Delta, drive_amps, options):
-    omega_q = omega_r - Delta
-    EJ = (omega_q + EC)**2 / (8 * EC)
-    
+    evals = hs["evals"][0][:num_states] 
+    H0 = 2.0 * np.pi * qt.Qobj(np.diag(evals - evals[0])) 
+    H1 = hs.op_in_dressed_eigenbasis(tmon.n_operator)
+
     print(f"Delta = {Delta:.3f} GHz → ωq = {omega_q:.3f} GHz, EJ = {EJ:.3f} GHz")
-    
-    H0, H1, evals, evecs = get_transmon_hamiltonian(EJ, EC, ng)
-    num_states = H0.shape[0]
-    
+
     model = ft.Model(
         H0,
         H1,
-        omega_d_values=np.array([2 * np.pi * omega_d]),
+        omega_d_values=np.array([2.0 * np.pi * omega_d]),
         drive_amplitudes=2.0 * np.pi * drive_amps
     )
-    
-    analysis = ft.FloquetAnalysis(
-        model, 
-        state_indices=list(range(num_states)), 
-        options=options
-    )
-    
+
+    analysis = ft.FloquetAnalysis(model, state_indices=list(range(num_states)), options=options)
+
     try:
         data = analysis.run()
     except Exception as e:
-        print(f"Failed at Delta = {Delta:.3f} GHz: {e}")
-        return np.nan
-    
-    psi0 = data["floquet_modes"][0][:, 0, :]
-    
-    energy_levels = np.arange(num_states)
-    avg_energy_levels = np.zeros(len(drive_amps))
-    
-    for i in range(len(drive_amps)):
-        probs = np.abs(psi0[i, :])**2
-        avg_energy_levels[i] = np.sum(probs * energy_levels)
-    
-    idx = np.where(avg_energy_levels >= 2.0)[0]
-    if idx.size > 0:
-        return nbar_vals[idx[0]]
+        print(f"Failed w/ Delta = {Delta:.3f} GHz: {e}")
+        continue
+
+    psi0 = data["floquet_modes"][0][:, 0, :] # middle index chooses the energy level 
+    levels = np.arange(psi0.shape[1]) 
+    avg_levels = np.sum(np.abs(psi0)**2 * levels, axis=1)
+
+    idx = np.where(avg_levels >= 2.0)[0] # threshold for population
+
+    if idx.size:
+        crit_nbar_numerical[i] = nbar_vals[idx[0]]
     else:
-        print(f"No ⟨N⟩ ≥ 2 found for Delta = {Delta:.3f} GHz")
-        return np.nan
+        print(f"No N >= 2, Delta = {Delta:.3f} GHz")
 
-options = ft.Options(
-    num_cpus=4,
-    nsteps=2000,
-    fit_range_fraction=0.8,
-    overlap_cutoff=0.1,
-    floquet_sampling_time_fraction=0.1,
-    save_floquet_modes=True
-)
+plt.figure(figsize=(10, 6))
+plt.plot(Delta_vals, n_crit_analytical, '--', label='Analytical (JC-like)', linewidth=2, alpha=0.8)
 
-n_crit_values = np.full_like(Delta_vals, np.nan, dtype=float)
+mask = ~np.isnan(crit_nbar_numerical)
+plt.plot(Delta_vals[mask], crit_nbar_numerical[mask], 'o-', label='Numerical (Floquet)', linewidth=2, markersize=6)
 
-for i, Delta in enumerate(Delta_vals):
-    n_crit_values[i] = find_critical_photon_number(Delta, drive_amps, options)
-    print(f"Delta = {Delta:.3f} GHz → n_crit = {n_crit_values[i]:.2f}")
-
-def analytical_critical_n(Delta, g, EC):
-    omega_q = omega_r - Delta
-    EJ = (omega_q + EC)**2 / (8 * EC)
-    
-    alpha = -EC
-    
-    omega_01 = omega_q
-    omega_12 = omega_q + alpha
-    
-    g_01 = g
-    g_12 = g * np.sqrt(2)
-    
-    n_crit_01 = abs((omega_01 - omega_r) / (2 * g_01))**2
-    n_crit_12 = abs((omega_12 - omega_r) / (2 * g_12))**2
-    
-    return min(n_crit_01, n_crit_12)
-
-n_crit_analytical = np.array([analytical_critical_n(Delta, g, EC) for Delta in Delta_vals])
-
-plt.figure(figsize=(12, 8))
-
-plt.plot(Delta_vals, n_crit_analytical, '--', 
-         label='Analytical (simplified)', linewidth=2, alpha=0.8, color='red')
-
-mask = ~np.isnan(n_crit_values)
-if np.any(mask):
-    plt.plot(Delta_vals[mask], n_crit_values[mask], 'o-', 
-             label='Numerical (Floquet)', linewidth=2, markersize=6, color='blue')
-
-plt.xlabel('Detuning Δ (GHz)')
-plt.ylabel('Critical photon number $n_{\\rm crit}$')
+plt.xlabel('Transmon–resonator detuning Δ (GHz)')
+plt.ylabel('Critical photon number $\\bar{n}_{\\rm crit}$')
 plt.yscale('log')
-plt.title('Critical photon number vs. detuning\n(Average energy level = 2)')
+plt.title('Critical photon number vs. detuning')
 plt.legend()
 plt.grid(True, alpha=0.3)
 plt.tight_layout()
-
-plt.figtext(0.02, 0.02, 
-           f'Parameters: g = {g} GHz, EC = {EC} GHz, ωr = {omega_r} GHz, ng = {ng}',
-           fontsize=10, ha='left')
-
 plt.show()
 
-print(f"\nSummary:")
-print(f"Parameters: g = {g} GHz, EC = {EC} GHz, ωr = {omega_r} GHz")
-print(f"Detuning range: {Delta_vals[0]:.2f} to {Delta_vals[-1]:.2f} GHz")
-print(f"Successful calculations: {np.sum(mask)}/{len(Delta_vals)}")
-
-if np.any(mask):
-    print(f"Critical photon number range: {np.nanmin(n_crit_values):.2f} to {np.nanmax(n_crit_values):.2f}")
+print(f"Drive amplitudes: {drive_amps[0]:.3f} – {drive_amps[-1]:.3f} GHz")
