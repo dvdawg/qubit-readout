@@ -14,6 +14,7 @@ from two_qubit import   (
     calculate_snr,
     optimize_parameters
 )
+from floquet_mist import check_mist_warning
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Parameter sweep for qubit readout optimization')
@@ -68,6 +69,17 @@ for delta_r1, delta_r2, g_1, g_2, kappa, delta_resonator in product(delta_r1_val
     res['snr_200ns']  = np.min(int_snrs)
     res['meets_spec'] = res['snr_200ns'] >= target_snr
 
+    mist_warning_q1, n_r1, n_crit1 = check_mist_warning([res['Omega_q1_mag'], res['phi_q1']], chi_1, g_1, delta_r1)
+    mist_warning_q2, n_r2, n_crit2 = check_mist_warning([res['Omega_q2_mag'], res['phi_q2']], chi_2, g_2, delta_r2)
+    
+    res['mist_warning_q1'] = mist_warning_q1
+    res['mist_warning_q2'] = mist_warning_q2
+    res['photon_number_q1'] = n_r1
+    res['photon_number_q2'] = n_r2
+    res['critical_photon_q1'] = n_crit1
+    res['critical_photon_q2'] = n_crit2
+    res['any_mist_warning'] = mist_warning_q1 or mist_warning_q2
+
     results.append(res)
 
     print(f"δr1={delta_r1:.3f}, δr2={delta_r2:.3f}, g1={g_1:.3f}, g2={g_2:.3f}, κ={kappa:.3f}, δr={delta_resonator:.3f}")
@@ -75,6 +87,7 @@ for delta_r1, delta_r2, g_1, g_2, kappa, delta_resonator in product(delta_r1_val
     print("  → Drives: Ωq1={:.3f}, φq1={:.3f}, Ωq2={:.3f}, φq2={:.3f}".format(
             res['Omega_q1_mag'], res['phi_q1'],
             res['Omega_q2_mag'], res['phi_q2']))
+    print(f"  → MIST: Q1 warning={mist_warning_q1} (n_r={n_r1:.3f}, n_crit={n_crit1:.3f}), Q2 warning={mist_warning_q2} (n_r={n_r2:.3f}, n_crit={n_crit2:.3f})")
     print(f"Progress: {pos}/{total} ({(pos/total)*100:.1f}%)")
     elapsed_time = time.time() - start_time
     if pos > 0:
@@ -93,7 +106,8 @@ df.to_csv(output_path, index=False)
 print("\nSweep complete. Results written to", output_path)
 
 print(f"→ {df['meets_spec'].sum()} / {len(df)} combos meet SNR≥{target_snr}")
+print(f"→ {df['any_mist_warning'].sum()} / {len(df)} combos have MIST warnings")
 print("Top 5 by worst-case SNR(200 ns):")
 print(df.nlargest(5, 'snr_200ns')[[
-    'delta_r1','delta_r2','g_1','g_2','kappa','delta_resonator','snr_200ns']])
+    'delta_r1','delta_r2','g_1','g_2','kappa','delta_resonator','snr_200ns','any_mist_warning']])
 

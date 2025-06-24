@@ -54,7 +54,7 @@ delta_resonator = -0.08
 g = 0.08
 kappa = 0.05
 delta_r = 0.85
-T1 = 30000  # ns
+T1 = 10000 # ns
 chi = compute_chi(g, delta_r)
 params = [2.0, 0]
 
