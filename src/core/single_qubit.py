@@ -109,5 +109,18 @@ def optimize_parameters(delta_r, g, kappa, delta_resonator, tau,
         'energy_levels': energy_levels
     }
 
+# def integrated_snr(state1, state2, params, chi, delta_r, kappa, g, delta_resonator, tau, eta):
+
+#     t = np.linspace(0, tau, 1000)
+#     alpha1 = alpha_traj(t, state1, params, chi, kappa, g, delta_resonator)
+#     alpha2 = alpha_traj(t, state2, params, chi, kappa, g, delta_resonator)
+#     W = alpha1 - alpha2
+
+#     signal  = np.trapz(np.abs(W)**2, t)
+#     numerator   = signal**2
+#     denominator = 0.5 * signal # 0.5 because of the 2-photon state
+
+#     return eta * kappa * numerator / denominator
+
 
 # t1  = around 50-300 microseconds

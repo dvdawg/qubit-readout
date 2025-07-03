@@ -83,11 +83,11 @@ for i, Delta in enumerate(Delta_vals):
         print(f"Failed w/ Delta = {Delta:.3f} GHz: {e}")
         continue
 
-    psi0 = data["floquet_modes"][0][:, 1, :] # middle index chooses the energy level 
+    psi0 = data["floquet_modes"][0][:, 0, :] # middle index chooses the energy level 
     levels = np.arange(psi0.shape[1]) 
     avg_levels = np.sum(np.abs(psi0)**2 * levels, axis=1)
 
-    idx = np.where(avg_levels >= 3.0)[0] # threshold for population
+    idx = np.where(avg_levels >= 2.0)[0] # threshold for population
 
     if idx.size:
         crit_nbar_numerical[i] = nbar_vals[idx[0]]
