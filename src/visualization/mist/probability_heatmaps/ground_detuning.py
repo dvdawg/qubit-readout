@@ -5,13 +5,11 @@ import qutip as qt
 import scqubits as scq
 import floquet as ft
 
-# system parameters
-g       = 0.120         # coupling strength (GHz)
-EC      = 0.220         # charging energy (GHz)
-omega_r = 5.7           # resonator frequency (GHz)
-omega_d = omega_r - 0.033  # drive frequency (GHz)
+g = 0.120 
+EC = 0.220 
+omega_r = 5.7 
+omega_d = omega_r - 0.033 
 
-# sweep parameters
 Delta_vals = np.linspace(0.75, 1.5, 20)
 nbar_vals  = np.linspace(0, 180, 91)
 drive_amps = 2.0 * g * np.sqrt(nbar_vals)
@@ -20,9 +18,7 @@ transition_prob_matrix = np.zeros((len(Delta_vals), len(nbar_vals)))
 
 def transmon_levels(n_levels, EC, EJ):
     return np.array([
-        -EJ + np.sqrt(8*EJ*EC)*(n + 0.5)
-        - (EC/12)*(6*n**2 + 6*n + 3)
-        for n in range(n_levels)
+        -EJ + np.sqrt(8*EJ*EC)*(n + 0.5) - (EC/12)*(6*n**2 + 6*n + 3) for n in range(n_levels)
     ])
 
 def quantum_critical_n(omega_qs, EC, omega_r, g):
@@ -37,7 +33,7 @@ def quantum_critical_n(omega_qs, EC, omega_r, g):
                     continue
                 gkl = g * np.sqrt(min(k,l) + 1)
                 ωkl = levels[k] - levels[l]
-                n_crit = abs((ωkl - omega_r)/(2*gkl))**2
+                n_crit = abs((ωkl - omega_d)/(2*gkl))**2
                 if k==0 or l==0:
                     mnc = min(mnc, n_crit)
         n_crits.append(mnc)
@@ -46,7 +42,6 @@ def quantum_critical_n(omega_qs, EC, omega_r, g):
 omega_qs_ana = omega_r + Delta_vals
 n_crit_ana   = quantum_critical_n(omega_qs_ana, EC, omega_r, g)
 
-# Floquet options: save the modes so we can inspect them
 options = ft.Options(
     num_cpus=4,
     nsteps=1000,
@@ -58,17 +53,17 @@ options = ft.Options(
 
 for i, Delta in enumerate(Delta_vals):
     omega_q = omega_r + Delta
-    EJ      = (omega_q + EC)**2 / (8*EC)
+    EJ = (omega_q + EC)**2 / (8*EC)
 
-    num_states   = 12
+    num_states = 12
     qubit_params = dict(EJ=EJ, EC=EC, ng=0.2, ncut=31)
     tmon = scq.Transmon(**qubit_params, truncated_dim=num_states)
-    hs   = scq.HilbertSpace([tmon])
+    hs = scq.HilbertSpace([tmon])
     hs.generate_lookup()
 
     evals = hs["evals"][0][:num_states]
-    H0    = 2*np.pi * qt.Qobj(np.diag(evals - evals[0]))
-    H1    = hs.op_in_dressed_eigenbasis(tmon.n_operator)
+    H0 = 2*np.pi * qt.Qobj(np.diag(evals - evals[0]))
+    H1 = hs.op_in_dressed_eigenbasis(tmon.n_operator)
 
     print(f"Δ = {Delta:.3f} GHz → ωq = {omega_q:.3f}, EJ = {EJ:.3f}")
 
@@ -78,17 +73,14 @@ for i, Delta in enumerate(Delta_vals):
         omega_d_values  = np.array([2*np.pi * omega_d]),
         drive_amplitudes = 2*np.pi * drive_amps
     )
-    fa       = ft.FloquetAnalysis(model, state_indices=list(range(num_states)), options=options)
-    data     = fa.run()
-    floq_modes = data["floquet_modes"][0]  # shape (nbar_vals, n_modes, dim)
+    fa = ft.FloquetAnalysis(model, state_indices=list(range(num_states)), options=options)
+    data = fa.run()
+    floq_modes = data["floquet_modes"][0]
 
-    # for each drive amplitude, pick the mode with max overlap with static |g⟩:
-    # static |g⟩ in the dressed basis is the basis vector [1,0,0,...]
     for j in range(len(nbar_vals)):
         overlaps = np.abs(floq_modes[j, :, 0])**2
-        ground_branch_idx = int(np.argmax(overlaps))  # force Python int
+        ground_branch_idx = int(np.argmax(overlaps))
         wf = floq_modes[j, ground_branch_idx, :]
-        # probability to *leave* |g⟩ = 1 - |⟨g|ψ_j⟩|²
         transition_prob_matrix[i, j] = 1 - overlaps[ground_branch_idx]
 
 # plot the heatmap
@@ -99,7 +91,7 @@ im = plt.imshow(
     aspect='auto',
     origin='lower',
     cmap='viridis',
-    
+    norm="log"
 )
 cbar = plt.colorbar(im)
 cbar.set_label('Transition Probability', fontsize=12)
