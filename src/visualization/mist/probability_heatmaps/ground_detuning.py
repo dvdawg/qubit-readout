@@ -10,7 +10,7 @@ EC = 0.220
 omega_r = 5.7
 omega_d = omega_r - 0.033
 
-Delta_vals = np.linspace(0.75, 1.5, 100)
+Delta_vals = np.linspace(0.75, 1.5, 200)
 nbar_vals = np.linspace(0, 180, 181)
 drive_amps = 2.0 * g * np.sqrt(nbar_vals)
 
@@ -80,9 +80,7 @@ im = plt.imshow(
     extent=[Delta_vals[0], Delta_vals[-1], nbar_vals[0], nbar_vals[-1]],
     aspect='auto',
     origin='lower',
-    cmap='viridis',
-    norm="log"
-)
+    cmap='viridis')
 cbar = plt.colorbar(im)
 cbar.set_label('Transition Probability', fontsize=12)
 plt.plot(Delta_vals, n_crit_ana, 'r--', linewidth=2, alpha=0.8, label='JC‐like')
