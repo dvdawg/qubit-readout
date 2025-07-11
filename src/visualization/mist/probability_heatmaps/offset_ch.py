@@ -7,15 +7,15 @@ import floquet as ft
 
 g = 0.120
 EC = 0.220
-omega_r = 6.7
-omega_d = omega_r - 0.033
+omega_r = 4.9
+omega_d = 7.0535 # omega_r - 0.033
 
-Delta = 1.0
+Delta = -1.0
 omega_q = omega_r + Delta
 EJ = (omega_q + EC)**2 / (8 * EC)
 
-ng_vals   = np.linspace(0.0, 0.5, 50)
-nbar_vals = np.linspace(20, 180, 81)
+ng_vals = np.linspace(-1, 1, 100)
+nbar_vals = np.linspace(0, 100, 101)
 drive_amps = 2.0 * g * np.sqrt(nbar_vals)
 
 transition_prob_matrix = np.zeros((len(ng_vals), len(nbar_vals)))
@@ -25,7 +25,7 @@ options = ft.Options(
     nsteps=500,
     fit_range_fraction=1.0,
     overlap_cutoff=0.8,
-    floquet_sampling_time_fraction=[0.0, 0.25, 0.5, 0.75, 1.0],
+    floquet_sampling_time_fraction=1.0,
     save_floquet_modes=True
 )
 
@@ -43,7 +43,7 @@ for i, ng in enumerate(ng_vals):
     model = ft.Model(
         H0,
         H1,
-        omega_d_values=np.array([2*np.pi * omega_d]),
+        omega_d_values=np.array([2*np.pi * omega_d]),   
         drive_amplitudes=2*np.pi * drive_amps
     )
 
@@ -51,7 +51,7 @@ for i, ng in enumerate(ng_vals):
     data = fa.run()
     bare = data["bare_state_overlaps"][0]
 
-    transition_prob_matrix[i, :] = 1.0 - bare[:, 0]
+    transition_prob_matrix[i, :] = 1.0 - bare[:, -1]
 
 plt.figure(figsize=(12, 8))
 im = plt.imshow(
@@ -60,15 +60,16 @@ im = plt.imshow(
     aspect='auto',
     origin='lower',
     cmap='viridis',
-    vmin=0.0,
-    vmax=1.0
+    norm=LogNorm()
+    # vmin=0.0,
+    # vmax=1.0
 )
 cbar = plt.colorbar(im)
 cbar.set_label('Transition Probability', fontsize=12)
-cbar.set_ticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
+# cbar.set_ticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
 
 plt.xlabel('Gate charge $n_g$', fontsize=12)
-plt.ylabel('Photon number $\\,\\overline{n}$', fontsize=12)
+plt.ylabel('Photon number $\\overline{n}$', fontsize=12)
 plt.title('Ground‐state Leakage vs. Gate Charge', fontsize=14)
 plt.yscale('log')
 plt.ylim(nbar_vals[0], nbar_vals[-1])

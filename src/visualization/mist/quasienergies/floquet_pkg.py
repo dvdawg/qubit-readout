@@ -14,16 +14,15 @@ from conversion import(
     get_EJ
 )
 
-# conversion
-omega_q = 6.4 * 2.0 * np.pi
-Delta = -1.2 * 2.0 * np.pi
-omega_d = omega_q - Delta
-g = 0.14 * 2.0 * np.pi                                     
+g = 0.120
+EC = 0.220
+omega_r = 5.0
+omega_d = 7.0535 # omega_r - 0.033
 
-EC = 0.28
-EJ = ((omega_q / (2.0 * np.pi)) + EC)**2 / (8 * EC)
+Delta = 1.2
+omega_q = omega_r + Delta
+EJ = (omega_q + EC)**2 / (8 * EC)
 
-# params
 num_states = 20       
 qubit_params = dict(EJ=EJ, EC=EC, ng=0.2, ncut=41) 
 tmon = scq.Transmon(**qubit_params, truncated_dim=num_states)
@@ -41,25 +40,24 @@ H1 = hilbert_space.op_in_dressed_eigenbasis(tmon.n_operator)
 
 nbar_vals = np.linspace(0, 180, 181)
 drive_amps = 2.0 * g * np.sqrt(nbar_vals)
-drive_amps = drive_amps[:, None]                        
-omega_d_vals = np.array([omega_d])
+drive_amps = drive_amps[:, None]
 
 # floquet sim
 model = ft.Model(H0, H1,
-                 omega_d_values = omega_d_vals,
-                 drive_amplitudes = drive_amps)
+    omega_d_values=np.array([2*np.pi * omega_d]),   
+    drive_amplitudes=2*np.pi * drive_amps)
 
 options = ft.Options(
     num_cpus = 4,        
-    nsteps = 30_000,   
+    nsteps = 10000,   
     fit_range_fraction = 1.0,      
-    overlap_cutoff = 0.0,      
+    overlap_cutoff = 0.8,      
     floquet_sampling_time_fraction = 0.0,   
     save_floquet_modes = True)
 
 floquet_analysis = ft.FloquetAnalysis(model,
-                                      state_indices = list(range(10)),
-                                      options = options)
+    state_indices = list(range(num_states)),
+    options = options)
 
 data = floquet_analysis.run()
 E_q = data["quasienergies"][0, :, :]               
@@ -71,20 +69,19 @@ num_plotted_states = 12
 plt.figure(figsize=(9,6))
 
 # coloring
-highlighted_states = [0, 1, 7, 10, 11]
-highlighted_colors = ['red', 'blue', 'green', 'orange', 'purple']
+# highlighted_states = [0, 1, 7, 10, 11]
+# highlighted_colors = ['red', 'blue', 'green', 'orange', 'purple']
 
 for idx in range(num_plotted_states):
-    if idx in highlighted_states:
-        color_idx = highlighted_states.index(idx)
-        color = highlighted_colors[color_idx]
-    else:
-        color = 'lightgray'
+    # if idx in highlighted_states:
+    #     color_idx = highlighted_states.index(idx)
+    #     color = highlighted_colors[color_idx]
+    # else:
+    #     color = 'lightgray'
     
     plt.plot(nbar_vals,
              E_fold[:, idx] / omega_d,   
              lw=1,
-             color=color,
              label=rf'$|{idx}\rangle$')
     
 # colors = plt.cm.tab20(np.linspace(0, 1, num_plotted_states))
