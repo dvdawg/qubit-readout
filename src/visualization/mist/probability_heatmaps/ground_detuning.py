@@ -10,8 +10,8 @@ EC = 0.220
 omega_r = 5.7
 omega_d = omega_r - 0.033
 
-Delta_vals = np.linspace(0.75, 1.5, 200)
-nbar_vals = np.linspace(0, 180, 181)
+Delta_vals = np.linspace(0.75, 1.2, 80)
+nbar_vals = np.linspace(5, 50, 81)
 drive_amps = 2.0 * g * np.sqrt(nbar_vals)
 
 transition_prob_matrix = np.zeros((len(Delta_vals), len(nbar_vals)))
@@ -63,12 +63,14 @@ for i, Delta in enumerate(Delta_vals):
     evals = hs["evals"][0][:num_states]
     H0 = 2*np.pi * qt.Qobj(np.diag(evals - evals[0]))
     H1 = hs.op_in_dressed_eigenbasis(tmon.n_operator)
+
     model = ft.Model(
         H0,
         H1,
         omega_d_values=np.array([2*np.pi * omega_d]),
         drive_amplitudes=2*np.pi * drive_amps
     )
+
     fa = ft.FloquetAnalysis(model, state_indices=list(range(num_states)), options=options)
     data = fa.run()
     bare = data["bare_state_overlaps"][0]
@@ -81,13 +83,14 @@ im = plt.imshow(
     aspect='auto',
     origin='lower',
     cmap='viridis')
+
 cbar = plt.colorbar(im)
 cbar.set_label('Transition Probability', fontsize=12)
 plt.plot(Delta_vals, n_crit_ana, 'r--', linewidth=2, alpha=0.8, label='JC‐like')
 plt.xlabel('Transmon–resonator detuning Δ (GHz)', fontsize=12)
 plt.ylabel('Photon number $\overline{n}$', fontsize=12)
 plt.title('Ground‐state leakage probability', fontsize=14)
-plt.yscale('log')
+# plt.yscale('log')
 plt.legend()
 plt.grid(alpha=0.3)
 plt.tight_layout()

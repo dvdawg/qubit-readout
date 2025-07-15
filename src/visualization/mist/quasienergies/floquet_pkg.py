@@ -13,21 +13,23 @@ from conversion import solve_EC, get_EJ
 g = 0.120
 EC = 0.220
 omega_r = 5.7
-Delta = 0.81
+Delta = 0.86
 omega_d = omega_r - 0.033
 omega_q = omega_r + Delta
 EJ = (omega_q + EC) ** 2 / (8 * EC)
 
-num_states = 20
+num_states = 22
 tmon = scq.Transmon(EJ=EJ, EC=EC, ng=0.2, ncut=41, truncated_dim=num_states)
+# resonator = scq.Oscillator()
+
 hilbert = scq.HilbertSpace([tmon])
 hilbert.generate_lookup()
 
 evals = hilbert["evals"][0][:num_states]
-H0 = qt.Qobj(np.diag(evals - evals[0]))
+H0 = qt.Qobj(np.diag(evals - evals[0]))  # hilbert.bare_hamiltonian() 
 H1 = hilbert.op_in_dressed_eigenbasis(tmon.n_operator)
 
-nbar_vals = np.linspace(0, 180, 181)
+nbar_vals = np.linspace(0, 50, 101)
 drive_amps = 2 * g * np.sqrt(nbar_vals)[:, None]
 
 model = ft.Model(H0, H1, omega_d_values=np.array([omega_d]), drive_amplitudes=drive_amps)
@@ -62,6 +64,7 @@ E_branch[0] = E_z[0]
 #         E_branch[i, ~taken] = cur[~taken]
 
 n_show = 12
+
 plt.figure(figsize=(9, 6))
 for m in range(n_show):
     plt.plot(nbar_vals, E_z[:, m] / omega_d, lw=1, label=fr'$|{m}\rangle$')
