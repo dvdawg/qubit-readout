@@ -10,7 +10,7 @@ EC = 0.220
 omega_r = 4.9
 omega_d = 7.0535 # omega_r - 0.033
 
-Delta = -1.0
+# Delta = -1.0
 omega_q = omega_r + Delta
 EJ = (omega_q + EC)**2 / (8 * EC)
 

@@ -54,7 +54,7 @@ options = ft.Options(
 
 for i, Delta in enumerate(Delta_vals):
     omega_q = omega_r + Delta
-    EJ = (omega_q + EC)**2 / (8 * EC)
+    EJ = (omega_q + EC) ** 2 / (8 * EC)
     num_states = 12
     qubit_params = dict(EJ=EJ, EC=EC, ng=0.2, ncut=31)
     tmon = scq.Transmon(**qubit_params, truncated_dim=num_states)
